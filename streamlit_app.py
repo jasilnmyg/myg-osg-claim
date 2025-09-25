@@ -100,7 +100,6 @@ Customer Information
 ----------------------------------------
 Name       : {customer_name}
 Mobile No  : {mobile_no_input.strip()}
-Email      : {customer_data['email'].iloc[0]}
 Address    : {customer_address}
 
 ----------------------------------------
