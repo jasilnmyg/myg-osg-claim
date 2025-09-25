@@ -45,7 +45,7 @@ with tab1:
 
             st.subheader("Customer Details")
             st.write(f"**Customer Name:** {customer_name}")
-            st.write(f"**Email:** {customer_data['Email'].iloc[0]}")
+            
             st.write(f"**Mobile:** {mobile_no_input.strip()}")
 
             customer_address = st.text_area("Enter Customer Address")
