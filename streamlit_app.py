@@ -9,12 +9,12 @@ from email.mime.application import MIMEApplication
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "OSID DATA.xlsx"
+EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
 TARGET_EMAIL = "akhilmp@myg.in"
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SENDER_EMAIL = "jasil@myg.in"
-SENDER_PASSWORD = "vurw qnwv ynys xkrf"
+SENDER_PASSWORD = "vurw qnwv ynys xkrf"   # ⚠️ Use app password, not your Gmail password!
 
 # Your Apps Script Web App URL (GET/POST)
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycby48-irQy37Eq_SQKJSpv70xiBFyajtR5ScIBfeRclnvYqAMv4eVCtJLZ87QUJADqXt/exec"
@@ -24,7 +24,10 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycby48-irQy37Eq_SQKJSpv70xi
 # ----------------------
 @st.cache_data
 def load_data():
-    return pd.read_excel(EXCEL_FILE)
+    df = pd.read_excel(EXCEL_FILE)
+    # Normalize headers (remove spaces, lowercase, replace NBSP)
+    df.columns = df.columns.str.strip().str.replace("\u00A0", " ").str.lower()
+    return df
 
 df = load_data()
 
@@ -38,30 +41,30 @@ with tab1:
     mobile_no_input = st.text_input("Enter Customer Mobile No")
 
     if mobile_no_input:
-        customer_data = df[df["Mobile No"].astype(str) == mobile_no_input.strip()]
+        # lookup using lowercase column names
+        customer_data = df[df["mobile no"].astype(str) == mobile_no_input.strip()]
 
         if not customer_data.empty:
-            customer_name = customer_data["Customer"].iloc[0]
+            customer_name = customer_data["customer"].iloc[0]
 
             st.subheader("Customer Details")
             st.write(f"**Customer Name:** {customer_name}")
-            
             st.write(f"**Mobile:** {mobile_no_input.strip()}")
 
             customer_address = st.text_area("Enter Customer Address")
             issue_description = st.text_area("Describe the Issue")
 
             st.subheader("Purchased Products")
-            customer_data["Product Display"] = (
-                "Invoice: " + customer_data["Invoice No"].astype(str) +
-                " | Model: " + customer_data["Model"].astype(str) +
-                " | Serial No: " + customer_data["Serial No"].astype(str) +
-                " | OSID: " + customer_data["OSID"].astype(str)
+            customer_data["product display"] = (
+                "Invoice: " + customer_data["invoice no"].astype(str) +
+                " | Model: " + customer_data["model"].astype(str) +
+                " | Serial No: " + customer_data["serial no"].astype(str) +
+                " | OSID: " + customer_data["osid"].astype(str)
             )
 
             product_choices = st.multiselect(
                 "Select Product(s) for Claim",
-                options=customer_data["Product Display"].tolist()
+                options=customer_data["product display"].tolist()
             )
 
             uploaded_file = st.file_uploader("Upload Invoice / Supporting Document", type=["pdf", "jpg", "png"])
@@ -74,16 +77,16 @@ with tab1:
                 elif not issue_description.strip():
                     st.warning("Please describe the issue.")
                 else:
-                    selected_products = customer_data[customer_data["Product Display"].isin(product_choices)]
+                    selected_products = customer_data[customer_data["product display"].isin(product_choices)]
 
                     # ----------------------
                     # EMAIL BODY
                     # ----------------------
                     product_info = "\n\n".join([
-                        f"Invoice  : {row['Invoice No']}\n"
-                        f"Model    : {row['Model']}\n"
-                        f"Serial No: {row['Serial No']}\n"
-                        f"OSID     : {row['OSID']}"
+                        f"Invoice  : {row['invoice no']}\n"
+                        f"Model    : {row['model']}\n"
+                        f"Serial No: {row['serial no']}\n"
+                        f"OSID     : {row['osid']}"
                         for _, row in selected_products.iterrows()
                     ])
 
@@ -97,7 +100,7 @@ Customer Information
 ----------------------------------------
 Name       : {customer_name}
 Mobile No  : {mobile_no_input.strip()}
-Email      : {customer_data['Email'].iloc[0]}
+Email      : {customer_data['email'].iloc[0]}
 Address    : {customer_address}
 
 ----------------------------------------
