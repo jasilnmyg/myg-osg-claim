@@ -9,12 +9,12 @@ from email.mime.application import MIMEApplication
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "OSID DATA.xlsx"
-TARGET_EMAIL = "jmon11829@gmail.com"
+EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
+TARGET_EMAIL = "akhilmp@myg.in"
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-SENDER_EMAIL = "gamersplatform0@gmail.com"
-SENDER_PASSWORD = "arbz roqo stto fxvk"
+SENDER_EMAIL = "jasil@myg.in"
+SENDER_PASSWORD = "vurw qnwv ynys xkrf"
 
 # Your Apps Script Web App URL (GET/POST)
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycby48-irQy37Eq_SQKJSpv70xiBFyajtR5ScIBfeRclnvYqAMv4eVCtJLZ87QUJADqXt/exec"
