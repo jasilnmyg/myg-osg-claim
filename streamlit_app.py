@@ -9,7 +9,7 @@ from email.mime.application import MIMEApplication
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
+EXCEL_FILE = "OSID DATA.xlsx"
 TARGET_EMAIL = "jmon11829@gmail.com"
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
