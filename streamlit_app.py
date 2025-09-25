@@ -9,12 +9,12 @@ from email.mime.application import MIMEApplication
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "OSID DATA.xlsx"
+EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
 TARGET_EMAIL = "akhilmp@myg.in"
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SENDER_EMAIL = "jasil@myg.in"
-SENDER_PASSWORD = "vurw qnwv ynys xkrf"   # ⚠️ Use app password, not Gmail password
+SENDER_PASSWORD = "vurw qnwv ynys xkrf"   # ⚠️ Use Gmail App Password, not your Gmail login password
 
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycby48-irQy37Eq_SQKJSpv70xiBFyajtR5ScIBfeRclnvYqAMv4eVCtJLZ87QUJADqXt/exec"
 
@@ -77,7 +77,7 @@ with tab1:
                     selected_products = customer_data[customer_data["product display"].isin(product_choices)]
 
                     # ----------------------
-                    # EMAIL BODY (HTML with bold headings)
+                    # EMAIL BODY (HTML with bold headings + footer)
                     # ----------------------
                     product_info = "<br><br>".join([
                         f"Invoice  : {row['invoice no']}<br>"
@@ -108,16 +108,23 @@ Address    : {customer_address}
 <hr>
 
 <p>We request your team to review and process this claim at the earliest convenience. Kindly update the claim status once processed.</p>
+
+<hr>
+<p>Regards,<br>
+<b>JASIL N</b><br>
++918589852747</p>
 """
 
                     # ----------------------
-                    # SEND EMAIL
+                    # EMAIL SUBJECT WITH OSID
                     # ----------------------
+                    osid_list = selected_products["osid"].astype(str).unique().tolist()
+                    osid_str = ", ".join(osid_list)
                     msg = MIMEMultipart()
                     msg["From"] = SENDER_EMAIL
                     msg["To"] = TARGET_EMAIL
-                    msg["Subject"] = f"Warranty Claim Submission – {customer_name}"
-                    msg.attach(MIMEText(body, "html"))  # <-- HTML email now
+                    msg["Subject"] = f"Warranty Claim Submission – OSID: {osid_str}"
+                    msg.attach(MIMEText(body, "html"))
 
                     if uploaded_file is not None:
                         file_attachment = MIMEApplication(uploaded_file.read(), Name=uploaded_file.name)
@@ -130,6 +137,9 @@ Address    : {customer_address}
                             server.login(SENDER_EMAIL, SENDER_PASSWORD)
                             server.sendmail(SENDER_EMAIL, TARGET_EMAIL, msg.as_string())
 
+                        # ----------------------
+                        # SUBMIT CLAIM TO GOOGLE SHEET
+                        # ----------------------
                         payload = {
                             "customer_name": customer_name,
                             "mobile_no": mobile_no_input.strip(),
