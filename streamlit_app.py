@@ -9,14 +9,13 @@ from email.mime.application import MIMEApplication
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "OSID DATA.xlsx"
+EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
 TARGET_EMAIL = "akhilmp@myg.in"
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SENDER_EMAIL = "jasil@myg.in"
-SENDER_PASSWORD = "vurw qnwv ynys xkrf"   # ⚠️ Use app password, not your Gmail password!
+SENDER_PASSWORD = "vurw qnwv ynys xkrf"   # ⚠️ Use app password, not Gmail password
 
-# Your Apps Script Web App URL (GET/POST)
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycby48-irQy37Eq_SQKJSpv70xiBFyajtR5ScIBfeRclnvYqAMv4eVCtJLZ87QUJADqXt/exec"
 
 # ----------------------
@@ -25,7 +24,6 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycby48-irQy37Eq_SQKJSpv70xi
 @st.cache_data
 def load_data():
     df = pd.read_excel(EXCEL_FILE)
-    # Normalize headers (remove spaces, lowercase, replace NBSP)
     df.columns = df.columns.str.strip().str.replace("\u00A0", " ").str.lower()
     return df
 
@@ -41,7 +39,6 @@ with tab1:
     mobile_no_input = st.text_input("Enter Customer Mobile No")
 
     if mobile_no_input:
-        # lookup using lowercase column names
         customer_data = df[df["mobile no"].astype(str) == mobile_no_input.strip()]
 
         if not customer_data.empty:
@@ -80,39 +77,37 @@ with tab1:
                     selected_products = customer_data[customer_data["product display"].isin(product_choices)]
 
                     # ----------------------
-                    # EMAIL BODY
+                    # EMAIL BODY (HTML with bold headings)
                     # ----------------------
-                    product_info = "\n\n".join([
-                        f"Invoice  : {row['invoice no']}\n"
-                        f"Model    : {row['model']}\n"
-                        f"Serial No: {row['serial no']}\n"
+                    product_info = "<br><br>".join([
+                        f"Invoice  : {row['invoice no']}<br>"
+                        f"Model    : {row['model']}<br>"
+                        f"Serial No: {row['serial no']}<br>"
                         f"OSID     : {row['osid']}"
                         for _, row in selected_products.iterrows()
                     ])
 
                     body = f"""
-Dear Shyla,
+<p>Dear Shyla,</p>
 
-We have received a warranty claim for the products purchased by our customer. Please find the details below:
+<p>We have received a warranty claim for the products purchased by our customer. Please find the details below:</p>
 
-----------------------------------------
-Customer Information
-----------------------------------------
-Name       : {customer_name}
-Mobile No  : {mobile_no_input.strip()}
+<hr>
+<p><b>Customer Information</b></p>
+Name       : {customer_name}<br>
+Mobile No  : {mobile_no_input.strip()}<br>
 Address    : {customer_address}
+<hr>
 
-----------------------------------------
-Product(s) Details
-----------------------------------------
+<p><b>Product(s) Details</b></p>
 {product_info}
+<hr>
 
-----------------------------------------
-Issue Description
-----------------------------------------
+<p><b>Issue Description</b></p>
 {issue_description}
+<hr>
 
-We request your team to review and process this claim at the earliest convenience. Kindly update the claim status once processed.
+<p>We request your team to review and process this claim at the earliest convenience. Kindly update the claim status once processed.</p>
 """
 
                     # ----------------------
@@ -121,8 +116,8 @@ We request your team to review and process this claim at the earliest convenienc
                     msg = MIMEMultipart()
                     msg["From"] = SENDER_EMAIL
                     msg["To"] = TARGET_EMAIL
-                    msg["Subject"] = f"Warranty Claim Submission – {customer_name}"  # Subject only here
-                    msg.attach(MIMEText(body, "plain"))
+                    msg["Subject"] = f"Warranty Claim Submission – {customer_name}"
+                    msg.attach(MIMEText(body, "html"))  # <-- HTML email now
 
                     if uploaded_file is not None:
                         file_attachment = MIMEApplication(uploaded_file.read(), Name=uploaded_file.name)
@@ -135,9 +130,6 @@ We request your team to review and process this claim at the earliest convenienc
                             server.login(SENDER_EMAIL, SENDER_PASSWORD)
                             server.sendmail(SENDER_EMAIL, TARGET_EMAIL, msg.as_string())
 
-                        # ----------------------
-                        # SUBMIT CLAIM TO GOOGLE SHEET VIA APPS SCRIPT
-                        # ----------------------
                         payload = {
                             "customer_name": customer_name,
                             "mobile_no": mobile_no_input.strip(),
