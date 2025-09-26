@@ -11,11 +11,11 @@ from email.mime.application import MIMEApplication
 # ----------------------
 EXCEL_FILE = "OSID DATA.xlsx"
 TARGET_EMAIL = "akhilmp@myg.in"
+CC_EMAILS = ["cc1@myg.in", "cc2@myg.in"]  # Add as many CC emails as needed
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SENDER_EMAIL = "jasil@myg.in"
-SENDER_PASSWORD = "vurw qnwv ynys xkrf"   # ⚠️ Use Gmail App Password, not your Gmail login password
-
+SENDER_PASSWORD = "vurw qnwv ynys xkrf"  # Use Gmail App Password
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycby48-irQy37Eq_SQKJSpv70xiBFyajtR5ScIBfeRclnvYqAMv4eVCtJLZ87QUJADqXt/exec"
 
 # ----------------------
@@ -116,15 +116,19 @@ Address    : {customer_address}
 """
 
                     # ----------------------
-                    # EMAIL SUBJECT WITH OSID
+                    # EMAIL SUBJECT WITH OSID + CC
                     # ----------------------
                     osid_list = selected_products["osid"].astype(str).unique().tolist()
                     osid_str = ", ".join(osid_list)
                     msg = MIMEMultipart()
                     msg["From"] = SENDER_EMAIL
                     msg["To"] = TARGET_EMAIL
+                    msg["Cc"] = ", ".join(CC_EMAILS)  # Add CC
                     msg["Subject"] = f"Warranty Claim Submission – OSID: {osid_str}"
                     msg.attach(MIMEText(body, "html"))
+
+                    # Combine TO + CC for sending
+                    recipients = [TARGET_EMAIL] + CC_EMAILS
 
                     if uploaded_file is not None:
                         file_attachment = MIMEApplication(uploaded_file.read(), Name=uploaded_file.name)
@@ -135,7 +139,7 @@ Address    : {customer_address}
                         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
                             server.starttls()
                             server.login(SENDER_EMAIL, SENDER_PASSWORD)
-                            server.sendmail(SENDER_EMAIL, TARGET_EMAIL, msg.as_string())
+                            server.sendmail(SENDER_EMAIL, recipients, msg.as_string())
 
                         # ----------------------
                         # SUBMIT CLAIM TO GOOGLE SHEET
@@ -150,7 +154,7 @@ Address    : {customer_address}
                         }
                         response = requests.post(WEB_APP_URL, json=payload)
                         if response.status_code == 200:
-                            st.success("✅ Claim submitted successfully, email sent, and saved to Google Sheets.")
+                            st.success("✅ Claim submitted successfully, email sent (with CC), and saved to Google Sheets.")
                         else:
                             st.error(f"❌ Failed to submit to Google Sheets: {response.text}")
 
