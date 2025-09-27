@@ -627,6 +627,6 @@ st.markdown("""
 ---
 <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 10px; margin-top: 1rem;">
     <h4 style="color: var(--primary-color); margin-bottom: 0.3rem;">🛡️ Warranty Claim Management System</h4>
-    <p style="margin: 0; color: #6c757d;">Powered by MYG Technology Solutions | 📧 <a href="mailto:jasil@myg.in" style="color: var(--primary-color);">jasil@myg.in</a> | 📱 <a href="tel:+918589852747" style="color: var(--primary-color);">+91 8589852747</a></p>
+    <p style="margin: 0; color: #6c757d;">Powered by Loyalty Operation | 📧 <a href="mailto:jasil@myg.in" style="color: var(--primary-color);">jasil@myg.in</a> | 📱 <a href="tel:+918589852747" style="color: var(--primary-color);">+91 8589852747</a></p>
 </div>
 """, unsafe_allow_html=True)
