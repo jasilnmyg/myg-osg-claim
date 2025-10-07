@@ -367,7 +367,7 @@ with tab1:
         <p style="margin: 5px 0 0 0;">New claim received from customer</p>
     </div>
     <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 10px 10px;">
-        <p>Dear Team,</p>
+        <p>Dear Shyla,</p>
         <p>We have received a warranty claim for the products purchased by our customer. Please find the details below:</p>
         <div style="background: white; padding: 15px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #2E86C1;">
             <h3 style="color: #2E86C1; margin-top: 0;">👤 Customer Information</h3>
