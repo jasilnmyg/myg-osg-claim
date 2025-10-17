@@ -153,7 +153,7 @@ st.markdown("""
 # CONFIG
 # ----------------------
 EXCEL_FILE = "OSID DATA.xlsx"
-TARGET_EMAIL = "akhilmp@myg.in"
+TARGET_EMAIL = "mygloyalty3@gmail.com"
 CC_EMAILS = ["shahin@myg.in"]
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
