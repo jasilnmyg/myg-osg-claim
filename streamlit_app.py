@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import requests
@@ -153,7 +152,7 @@ st.markdown("""
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "OSID DATA.xlsx"
+EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
 TARGET_EMAIL = "akhilmp@myg.in"
 CC_EMAILS = ["shahin@myg.in"]
 SMTP_SERVER = "smtp.gmail.com"
@@ -272,19 +271,12 @@ with tab1:
             </div>
             """, unsafe_allow_html=True)
 
-            # Address & issue
+            # Address (common)
             customer_address = st.text_area(
                 "📍 Complete Service Address *",
                 placeholder="Enter complete address including pincode",
                 help="This address will be used for service appointment",
                 height=100
-            ).strip()
-
-            issue_description = st.text_area(
-                "📝 Describe the Issue *",
-                placeholder="Please describe the problem you're experiencing with the product(s)",
-                help="Provide detailed information about the issue for faster resolution",
-                height=120
             ).strip()
 
             # Build display string for products
@@ -304,11 +296,53 @@ with tab1:
                 help="You can select multiple products if the issue affects more than one item"
             )
 
-            uploaded_file = st.file_uploader(
-                "📄 Upload Invoice / Supporting Document *",
-                type=["pdf", "jpg", "jpeg", "png"],
-                help="Upload invoice, receipt, or any other supporting document"
-            )
+            # --- NEW: product-wise issue + file per selected product ---
+            product_issue_data = []
+            if product_choices:
+                st.markdown('<div class="section-header">🧾 Product-wise Details</div>', unsafe_allow_html=True)
+                for i, product in enumerate(product_choices):
+                    # create unique keys using index to avoid collisions
+                    with st.expander(f"🧩 {product}"):
+                        issue_key = f"issue_{mobile_no_input}_{i}"
+                        file_key = f"file_{mobile_no_input}_{i}"
+
+                        issue_text = st.text_area(
+                            f"📝 Describe the Issue for\n{product}",
+                            placeholder="Please describe the problem for this specific product",
+                            height=120,
+                            key=issue_key
+                        ).strip()
+
+                        prod_file = st.file_uploader(
+                            f"📄 Upload Invoice / Supporting Document for\n{product}",
+                            type=["pdf", "jpg", "jpeg", "png"],
+                            key=file_key
+                        )
+
+                        product_issue_data.append({
+                            "product_display": product,
+                            "issue": issue_text,
+                            "file": prod_file
+                        })
+
+            # If user didn't expand per-product entries, still allow a global issue/file:
+            global_issue_info = st.checkbox("Use single Issue & Document for all selected products (check to use)", value=True if len(product_choices) <= 1 else False)
+            global_issue_text = ""
+            global_uploaded_file = None
+            if global_issue_info:
+                # show single issue & file uploader (keeps backward-compatibility)
+                global_issue_text = st.text_area(
+                    "📝 Describe the Issue (applies to all selected products)",
+                    placeholder="If checked, this issue text & document will be applied to every selected product",
+                    height=120,
+                    key=f"global_issue_{mobile_no_input}"
+                ).strip()
+
+                global_uploaded_file = st.file_uploader(
+                    "📄 Upload Invoice / Supporting Document (applies to all selected products)",
+                    type=["pdf", "jpg", "jpeg", "png"],
+                    key=f"global_file_{mobile_no_input}"
+                )
 
             st.markdown("<br>", unsafe_allow_html=True)
             col1, col2, col3 = st.columns([1, 2, 1])
@@ -326,14 +360,22 @@ with tab1:
                 if not customer_address:
                     errors.append("Customer address is required")
 
-                if not issue_description:
-                    errors.append("Issue description is required")
-
                 if not product_choices:
                     errors.append("Please select at least one product")
 
-                if uploaded_file is None:
-                    errors.append("Please upload a supporting document")
+                # If global mode is checked, ensure global issue/file present
+                if global_issue_info:
+                    if not global_issue_text:
+                        errors.append("Please enter the issue description (global) or uncheck the global option")
+                    if global_uploaded_file is None:
+                        errors.append("Please upload a supporting document (global) or uncheck the global option")
+                else:
+                    # validate per-product entries
+                    for p in product_issue_data:
+                        if not p["issue"]:
+                            errors.append(f"Issue description required for: {p['product_display']}")
+                        if p["file"] is None:
+                            errors.append(f"Supporting document required for: {p['product_display']}")
 
                 if errors:
                     for error in errors:
@@ -346,15 +388,35 @@ with tab1:
                         status_text.text("📧 Preparing email...")
                         progress_bar.progress(10)
 
+                        # selected_products DataFrame for product meta
                         selected_products = customer_data[customer_data["product_display"].isin(product_choices)]
 
-                        product_info = "<br><br>".join([
-                            f"Invoice  : {row.get(invoice_col, '')}<br>"
-                            f"Model    : {row.get(model_col, '')}<br>"
-                            f"Serial No: {row.get(serial_col, '')}<br>"
-                            f"OSID     : {row.get(osid_col, '')}"
-                            for _, row in selected_products.iterrows()
-                        ])
+                        # Build product_info for email: include product meta + issue text
+                        product_info_blocks = []
+                        if global_issue_info:
+                            # apply global issue & file to all
+                            for _, row in selected_products.iterrows():
+                                product_info_blocks.append(
+                                    f"Invoice  : {row.get(invoice_col, '')}<br>"
+                                    f"Model    : {row.get(model_col, '')}<br>"
+                                    f"Serial No: {row.get(serial_col, '')}<br>"
+                                    f"OSID     : {row.get(osid_col, '')}<br>"
+                                    f"Issue    : {global_issue_text}"
+                                )
+                        else:
+                            # map product_display -> row to get invoice/model/serial/osid
+                            dd = {row["product_display"]: row for _, row in selected_products.iterrows()}
+                            for p in product_issue_data:
+                                row = dd.get(p["product_display"], {})
+                                product_info_blocks.append(
+                                    f"Invoice  : {row.get(invoice_col, '')}<br>"
+                                    f"Model    : {row.get(model_col, '')}<br>"
+                                    f"Serial No: {row.get(serial_col, '')}<br>"
+                                    f"OSID     : {row.get(osid_col, '')}<br>"
+                                    f"Issue    : {p['issue']}"
+                                )
+
+                        product_info = "<br><br>".join(product_info_blocks)
 
                         # Get current IST time
                         ist_time = get_ist_datetime()
@@ -378,10 +440,6 @@ with tab1:
         <div style="background: white; padding: 15px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #28A745;">
             <h3 style="color: #28A745; margin-top: 0;">📦 Product(s) Details</h3>
             <div style="font-family: monospace; font-size: 14px;">{product_info}</div>
-        </div>
-        <div style="background: white; padding: 15px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #FFC107;">
-            <h3 style="color: #FFC107; margin-top: 0;">🔍 Issue Description</h3>
-            <p style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-style: italic;">"{issue_description}"</p>
         </div>
         <div style="background: #e7f3ff; padding: 12px; border-radius: 8px; margin: 12px 0;">
             <p><strong>📅 Submitted:</strong> {ist_formatted}</p>
@@ -410,11 +468,28 @@ with tab1:
                         msg["Subject"] = f"🛡️ Warranty Claim Submission – OSID: {osid_str} – {customer_name}"
                         msg.attach(MIMEText(body, "html"))
 
-                        # Attach uploaded file (seek to start in case stream consumed)
-                        uploaded_file.seek(0)
-                        file_attachment = MIMEApplication(uploaded_file.read(), Name=uploaded_file.name)
-                        file_attachment['Content-Disposition'] = f'attachment; filename="{uploaded_file.name}"'
-                        msg.attach(file_attachment)
+                        # Attach uploaded files:
+                        # If global mode, attach the global file once
+                        if global_issue_info and global_uploaded_file:
+                            try:
+                                global_uploaded_file.seek(0)
+                                file_attachment = MIMEApplication(global_uploaded_file.read(), Name=global_uploaded_file.name)
+                                file_attachment['Content-Disposition'] = f'attachment; filename="{global_uploaded_file.name}"'
+                                msg.attach(file_attachment)
+                            except Exception:
+                                pass
+
+                        # If per-product files, attach each
+                        if not global_issue_info:
+                            for p in product_issue_data:
+                                if p["file"]:
+                                    try:
+                                        p["file"].seek(0)
+                                        part = MIMEApplication(p["file"].read(), Name=p["file"].name)
+                                        part['Content-Disposition'] = f'attachment; filename="{p["file"].name}"'
+                                        msg.attach(part)
+                                    except Exception:
+                                        pass
 
                         recipients = [TARGET_EMAIL] + CC_EMAILS
 
@@ -428,21 +503,42 @@ with tab1:
                         progress_bar.progress(70)
 
                         # Submit to Google Sheets (or other endpoint)
-                        payload = {
-                            "customer_name": customer_name,
-                            "mobile_no": mobile_no_input,
-                            "address": customer_address,
-                            "products": "; ".join(product_choices),
-                            "issue_description": issue_description,
-                            "status": "Pending",
-                            "submitted_date": ist_time.isoformat()
-                        }
-
-                        try:
-                            response = requests.post(WEB_APP_URL, json=payload, timeout=8)
-                            post_ok = (response.status_code == 200)
-                        except Exception:
-                            post_ok = False
+                        # Keep previous payload shape but include per-product issues aggregated
+                        if global_issue_info:
+                            # same issue for all
+                            payload = {
+                                "customer_name": customer_name,
+                                "mobile_no": mobile_no_input,
+                                "address": customer_address,
+                                "products": "; ".join(product_choices),
+                                "issue_description": global_issue_text,
+                                "status": "Pending",
+                                "submitted_date": ist_time.isoformat()
+                            }
+                            try:
+                                response = requests.post(WEB_APP_URL, json=payload, timeout=8)
+                                post_ok = (response.status_code == 200)
+                            except Exception:
+                                post_ok = False
+                        else:
+                            # combine issues per product into one string for compatibility
+                            combined_issues = []
+                            for p in product_issue_data:
+                                combined_issues.append(f"{p['product_display']} -> {p['issue']}")
+                            payload = {
+                                "customer_name": customer_name,
+                                "mobile_no": mobile_no_input,
+                                "address": customer_address,
+                                "products": "; ".join(product_choices),
+                                "issue_description": " || ".join(combined_issues),
+                                "status": "Pending",
+                                "submitted_date": ist_time.isoformat()
+                            }
+                            try:
+                                response = requests.post(WEB_APP_URL, json=payload, timeout=8)
+                                post_ok = (response.status_code == 200)
+                            except Exception:
+                                post_ok = False
 
                         progress_bar.progress(100)
                         status_text.text("✅ Completed!")
