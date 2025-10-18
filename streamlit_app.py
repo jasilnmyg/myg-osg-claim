@@ -20,31 +20,6 @@ st.set_page_config(
 )
 
 # ----------------------
-# HELPER FUNCTION FOR IST
-# ----------------------
-def get_ist_datetime():
-    """Get current datetime in Indian Standard Time"""
-    ist = pytz.timezone('Asia/Kolkata')
-    return datetime.now(ist)
-
-def format_ist_datetime(dt_str):
-    """Format datetime string to IST display format"""
-    try:
-        # Parse the datetime string (assuming it's in ISO format)
-        dt = pd.to_datetime(dt_str)
-        # If timezone-naive, assume it's already IST
-        if dt.tz is None:
-            ist = pytz.timezone('Asia/Kolkata')
-            dt = ist.localize(dt)
-        else:
-            # Convert to IST if it has timezone info
-            ist = pytz.timezone('Asia/Kolkata')
-            dt = dt.astimezone(ist)
-        return dt.strftime('%Y-%m-%d %H:%M:%S IST')
-    except:
-        return str(dt_str)
-
-# ----------------------
 # CUSTOM CSS STYLING
 # ----------------------
 st.markdown("""
@@ -152,9 +127,9 @@ st.markdown("""
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "OSID DATA.xlsx"
-TARGET_EMAIL = "shyla.mariadhasan@onsite.co.in"
-CC_EMAILS = ["shine.at@onsite.co.in", "akhilmp@myg.in","sachin.kadam@onsite.co.in","shanmugaraja.a@onsite.co.in","akhil.chandran@onsite.co.in"]
+EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
+TARGET_EMAIL = "arjunpm@myg.in"
+CC_EMAILS = ["mygloyalty3@gmail.com"]
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SENDER_EMAIL = "jasil@myg.in"
@@ -162,24 +137,29 @@ SENDER_PASSWORD = "vurw qnwv ynys xkrf"
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycby48-irQy37Eq_SQKJSpv70xiBFyajtR5ScIBfeRclnvYqAMv4eVCtJLZ87QUJADqXt/exec"
 
 # ----------------------
-# SIDEBAR
+# HELPER FUNCTION FOR IST
 # ----------------------
-with st.sidebar:
-    st.markdown("### ℹ️ Help & Support")
-    st.markdown("**Contact Information:**")
-    st.markdown("📧 Email: jasil@myg.in")
-    st.markdown("📱 Phone: +91 8589852747")
-    st.markdown("🕒 Business Hours: 9 AM - 6 PM")
+def get_ist_datetime():
+    """Get current datetime in Indian Standard Time"""
+    ist = pytz.timezone('Asia/Kolkata')
+    return datetime.now(ist)
 
-# ----------------------
-# MAIN HEADER
-# ----------------------
-st.markdown("""
-<div class="main-header">
-    <h1>🛡️ Warranty Claim Management System</h1>
-    <p>Professional warranty claim submission and tracking platform</p>
-</div>
-""", unsafe_allow_html=True)
+def format_ist_datetime(dt_str):
+    """Format datetime string to IST display format"""
+    try:
+        # Parse the datetime string (assuming it's in ISO format)
+        dt = pd.to_datetime(dt_str)
+        # If timezone-naive, assume it's already IST
+        if dt.tz is None:
+            ist = pytz.timezone('Asia/Kolkata')
+            dt = ist.localize(dt)
+        else:
+            # Convert to IST if it has timezone info
+            ist = pytz.timezone('Asia/Kolkata')
+            dt = dt.astimezone(ist)
+        return dt.strftime('%Y-%m-%d %H:%M:%S IST')
+    except:
+        return str(dt_str)
 
 # ----------------------
 # LOAD EXCEL DATA
@@ -220,6 +200,26 @@ model_col = col(df, ["model"]) or "model"
 serial_col = col(df, ["serial no", "serialno", "serial_no"]) or "serial no"
 osid_col = col(df, ["osid"]) or "osid"
 customer_col = col(df, ["customer", "customer name"]) or "customer"
+
+# ----------------------
+# SIDEBAR
+# ----------------------
+with st.sidebar:
+    st.markdown("### ℹ️ Help & Support")
+    st.markdown("**Contact Information:**")
+    st.markdown("📧 Email: jasil@myg.in")
+    st.markdown("📱 Phone: +91 8589852747")
+    st.markdown("🕒 Business Hours: 9 AM - 6 PM")
+
+# ----------------------
+# MAIN HEADER
+# ----------------------
+st.markdown("""
+<div class="main-header">
+    <h1>🛡️ Warranty Claim Management System</h1>
+    <p>Professional warranty claim submission and tracking platform</p>
+</div>
+""", unsafe_allow_html=True)
 
 # ----------------------
 # MAIN TABS
@@ -438,7 +438,7 @@ with tab1:
             <strong>Address:</strong> {customer_address}</p>
         </div>
         <div style="background: white; padding: 15px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #28A745;">
-            <h3 style="color: #28A745; margin-top: 0;">📦 Product(s) Details</h3>
+            <h3 style="color: #28A745; margin-top: 0;">📦 Product Details & Issue Description</h3>
             <div style="font-family: monospace; font-size: 14px;">{product_info}</div>
         </div>
         <div style="background: #e7f3ff; padding: 12px; border-radius: 8px; margin: 12px 0;">
@@ -521,19 +521,17 @@ with tab1:
                             except Exception:
                                 post_ok = False
                         else:
-                            # combine issues per product into one string for compatibility
-                            combined_issues = []
-                            for p in product_issue_data:
-                                combined_issues.append(f"{p['product_display']} -> {p['issue']}")
+                            combined_issues = [p['issue'] for p in product_issue_data]
                             payload = {
                                 "customer_name": customer_name,
                                 "mobile_no": mobile_no_input,
                                 "address": customer_address,
                                 "products": "; ".join(product_choices),
-                                "issue_description": " || ".join(combined_issues),
+                                "issue_description": " || ".join(combined_issues),  # Only issue text now
                                 "status": "Pending",
                                 "submitted_date": ist_time.isoformat()
                             }
+
                             try:
                                 response = requests.post(WEB_APP_URL, json=payload, timeout=8)
                                 post_ok = (response.status_code == 200)
