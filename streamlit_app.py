@@ -127,7 +127,7 @@ st.markdown("""
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
+EXCEL_FILE = "OSID DATA.xlsx"
 TARGET_EMAIL = "arjunpm@myg.in"
 CC_EMAILS = ["mygloyalty3@gmail.com"]
 SMTP_SERVER = "smtp.gmail.com"
