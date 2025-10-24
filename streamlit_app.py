@@ -127,7 +127,7 @@ st.markdown("""
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "OSID DATA.xlsx"
+EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
 TARGET_EMAIL = "shyla.mariadhasan@onsite.co.in"
 CC_EMAILS = ["shine.at@onsite.co.in", "akhilmp@myg.in","sachin.kadam@onsite.co.in","shanmugaraja.a@onsite.co.in","akhil.chandran@onsite.co.in"]
 SMTP_SERVER = "smtp.gmail.com"
@@ -367,15 +367,12 @@ with tab1:
                 if global_issue_info:
                     if not global_issue_text:
                         errors.append("Please enter the issue description (global) or uncheck the global option")
-                    if global_uploaded_file is None:
-                        errors.append("Please upload a supporting document (global) or uncheck the global option")
                 else:
                     # validate per-product entries
                     for p in product_issue_data:
                         if not p["issue"]:
                             errors.append(f"Issue description required for: {p['product_display']}")
-                        if p["file"] is None:
-                            errors.append(f"Supporting document required for: {p['product_display']}")
+                        # File is optional — no check for p["file"]
 
                 if errors:
                     for error in errors:
@@ -646,7 +643,7 @@ with tab2:
                                     <strong>📍 Address:</strong> {str(claim.get('address', 'N/A'))[:60]}{'...' if len(str(claim.get('address', 'N/A'))) > 60 else ''}
                                 </div>
                                 <div>
-                                    <strong>📦 Products:</strong> {str(claim.get('products', 'N/A'))[:60]}{'...' if len(str(claim.get('products', 'N/A'))) > 60 else ''}<br>
+                                    <strong>📦 Products:</strong> {str(claim.get('products', 'N/A'))[:60]}{'...' if len(str(claim.get,'N/A')) > 60 else ''}<br>
                                     <strong>🔍 Issue:</strong> {str(claim.get('issue_description', 'N/A'))[:60]}{'...' if len(str(claim.get('issue_description', 'N/A'))) > 60 else ''}
                                 </div>
                             </div>
