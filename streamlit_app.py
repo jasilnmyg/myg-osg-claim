@@ -127,7 +127,7 @@ st.markdown("""
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "OSID DATA.xlsx"
+EXCEL_FILE = "/workspaces/myg-osg-claim/OSID DATA.xlsx"
 TARGET_EMAIL = "shyla.mariadhasan@onsite.co.in"
 CC_EMAILS = ["shine.at@onsite.co.in", "akhilmp@myg.in","sachin.kadam@onsite.co.in","shanmugaraja.a@onsite.co.in","akhil.chandran@onsite.co.in"]
 SMTP_SERVER = "smtp.gmail.com"
@@ -591,108 +591,130 @@ with tab2:
         st.markdown("<br>", unsafe_allow_html=True)
         refresh_button = st.button("🔄 Refresh Data", use_container_width=True)
 
-    # Fetch claims each time so refresh works
+    # Fetch claims
     try:
-        response = requests.get(WEB_APP_URL, timeout=8)
+        response = requests.get(WEB_APP_URL, timeout=10)  # Increased timeout for reliability
+        
+
         if response.status_code == 200:
-            all_claims = pd.DataFrame(response.json())
-
-            if not all_claims.empty:
-                # Normalize columns
-                all_claims.columns = all_claims.columns.str.strip().str.lower().str.replace(" ", "_")
-
-                if search_mobile:
-                    filtered_claims = all_claims[all_claims.get('mobile_no', all_claims.columns[0]).astype(str).str.strip() == search_mobile]
-                else:
-                    filtered_claims = all_claims
-
-                if filtered_claims.empty:
-                    if search_mobile:
-                        st.markdown(f"""
-                        <div class="info-box">
-                            ℹ️ <strong>No claims found</strong><br>
-                            No claims found for mobile number: <strong>{search_mobile}</strong>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
+            if 'application/json' in response.headers.get('Content-Type', '').lower():
+                try:
+                    json_data = response.json()
+                    if not json_data:  # Check for empty JSON
                         st.markdown("""
                         <div class="info-box">
-                            ℹ️ <strong>No claims submitted yet</strong><br>
-                            No warranty claims have been submitted yet.
+                            ℹ️ <strong>No claims found</strong><br>
+                            The server returned an empty response.
                         </div>
                         """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div class="section-header">📊 Claims Overview ({len(filtered_claims)} records)</div>
-                    """, unsafe_allow_html=True)
+                        all_claims = pd.DataFrame()
+                    else:
+                        all_claims = pd.DataFrame(json_data)
+                except ValueError as e:
+                    st.error(f"❌ Failed to parse JSON: {e}")
+                    st.write(f"Response content: {response.text[:500]}")
+                    all_claims = pd.DataFrame()
+            else:
+                st.error(f"❌ Server did not return JSON. Content-Type: {response.headers.get('Content-Type')}")
+                st.write(f"Response content: {response.text[:500]}")
+                all_claims = pd.DataFrame()
+        else:
+            st.error(f"❌ Failed to fetch claims data. Status code: {response.status_code}")
+            all_claims = pd.DataFrame()
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ Network error while fetching claims: {e}")
+        all_claims = pd.DataFrame()
+    except Exception as e:
+        st.error(f"❌ Unexpected error while fetching claims: {e}")
+        all_claims = pd.DataFrame()
 
-                    # Pretty card view
-                    for idx, claim in filtered_claims.iterrows():
-                        status = str(claim.get('status', 'Unknown')).lower()
-                        status_label = claim.get('status', 'Unknown')
+    if not all_claims.empty:
+        # Normalize columns immediately
+        all_claims.columns = all_claims.columns.str.strip().str.lower().str.replace(r"\s+", "_", regex=True)
 
-                        st.markdown(f"""
-                        <div style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1rem; margin: 0.6rem 0;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <h4 style="color: var(--primary-color); margin: 0;">{claim.get('customer_name', 'N/A')}</h4>
-                                <div style="font-weight:700;">{status_label}</div>
-                            </div>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.6rem;">
-                                <div>
-                                    <strong>📱 Mobile:</strong> {claim.get('mobile_no', 'N/A')}<br>
-                                    <strong>📍 Address:</strong> {str(claim.get('address', 'N/A'))[:60]}{'...' if len(str(claim.get('address', 'N/A'))) > 60 else ''}
-                                </div>
-                                <div>
-                                    <strong>📦 Products:</strong> {str(claim.get('products', 'N/A'))[:60]}{'...' if len(str(claim.get,'N/A')) > 60 else ''}<br>
-                                    <strong>🔍 Issue:</strong> {str(claim.get('issue_description', 'N/A'))[:60]}{'...' if len(str(claim.get('issue_description', 'N/A'))) > 60 else ''}
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+        if search_mobile:
+            filtered_claims = all_claims[all_claims.get('mobile_no', pd.Series(dtype=str)).astype(str).str.strip() == search_mobile]
+        else:
+            filtered_claims = all_claims
 
-                    # Tabular view
-                    st.markdown('<div class="section-header">📋 Detailed Claims Table</div>', unsafe_allow_html=True)
-
-                    display_df = filtered_claims.copy()
-                    # format dates with IST
-                    if 'submitted_date' in display_df.columns:
-                        display_df['submitted_date'] = display_df['submitted_date'].apply(
-                            lambda x: format_ist_datetime(x) if pd.notna(x) else 'N/A'
-                        )
-                    elif 'timestamp' in display_df.columns:
-                        display_df['timestamp'] = display_df['timestamp'].apply(
-                            lambda x: format_ist_datetime(x) if pd.notna(x) else 'N/A'
-                        )
-
-                    # Rename for nicer column names
-                    rename_map = {
-                        'customer_name': 'Customer Name',
-                        'mobile_no': 'Mobile No',
-                        'address': 'Address',
-                        'products': 'Products',
-                        'issue_description': 'Issue Description',
-                        'status': 'Status',
-                        'submitted_date': 'Submitted Date (IST)',
-                        'timestamp': 'Timestamp (IST)'
-                    }
-                    display_df = display_df.rename(columns={k: v for k, v in rename_map.items() if k in display_df.columns})
-
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
-
+        if filtered_claims.empty:
+            if search_mobile:
+                st.markdown(f"""
+                <div class="info-box">
+                    ℹ️ <strong>No claims found</strong><br>
+                    No claims found for mobile number: <strong>{search_mobile}</strong>
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 st.markdown("""
                 <div class="info-box">
-                    ℹ️ <strong>No claims found</strong><br>
-                    No warranty claims have been submitted yet. Start by submitting a new claim in the "Submit New Claim" tab.
+                    ℹ️ <strong>No claims submitted yet</strong><br>
+                    No warranty claims have been submitted yet.
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.error(f"❌ Failed to fetch claims data. Status code: {response.status_code}")
+            st.markdown(f"""
+            <div class="section-header">📊 Claims Overview ({len(filtered_claims)} records)</div>
+            """, unsafe_allow_html=True)
 
-    except requests.exceptions.RequestException as e:
-        st.error(f"❌ Network error while fetching claims: {e}")
-    except Exception as e:
-        st.error(f"❌ Unexpected error while fetching claims: {e}")
+            # Pretty card view
+            for idx, claim in filtered_claims.iterrows():
+                status = str(claim.get('status', 'Unknown')).lower()
+                status_label = claim.get('status', 'Unknown')
+
+                st.markdown(f"""
+                <div style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1rem; margin: 0.6rem 0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h4 style="color: var(--primary-color); margin: 0;">{claim.get('customer_name', 'N/A')}</h4>
+                        <div style="font-weight:700;">{status_label}</div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.6rem;">
+                        <div>
+                            <strong>📱 Mobile:</strong> {claim.get('mobile_no', 'N/A')}<br>
+                            <strong>📍 Address:</strong> {str(claim.get('address', 'N/A'))[:60]}{'...' if len(str(claim.get('address', 'N/A'))) > 60 else ''}
+                        </div>
+                        <div>
+                            <strong>📦 Products:</strong> {str(claim.get('products', 'N/A'))[:60]}{'...' if len(str(claim.get('products', 'N/A'))) > 60 else ''}<br>
+                            <strong>🔍 Issue:</strong> {str(claim.get('issue_description', 'N/A'))[:60]}{'...' if len(str(claim.get('issue_description', 'N/A'))) > 60 else ''}
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Tabular view
+            st.markdown('<div class="section-header">📋 Detailed Claims Table</div>', unsafe_allow_html=True)
+
+            display_df = filtered_claims.copy()
+            if 'submitted_date' in display_df.columns:
+                display_df['submitted_date'] = display_df['submitted_date'].apply(
+                    lambda x: format_ist_datetime(x) if pd.notna(x) else 'N/A'
+                )
+            elif 'timestamp' in display_df.columns:
+                display_df['timestamp'] = display_df['timestamp'].apply(
+                    lambda x: format_ist_datetime(x) if pd.notna(x) else 'N/A'
+                )
+
+            rename_map = {
+                'customer_name': 'Customer Name',
+                'mobile_no': 'Mobile No',
+                'address': 'Address',
+                'products': 'Products',
+                'issue_description': 'Issue Description',
+                'status': 'Status',
+                'submitted_date': 'Submitted Date (IST)',
+                'timestamp': 'Timestamp (IST)'
+            }
+            display_df = display_df.rename(columns={k: v for k, v in rename_map.items() if k in display_df.columns})
+
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+    else:
+        st.markdown("""
+        <div class="info-box">
+            ℹ️ <strong>No claims found</strong><br>
+            No warranty claims have been submitted yet. Start by submitting a new claim in the "Submit New Claim" tab.
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("""
     <div class="info-box">
