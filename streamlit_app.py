@@ -127,7 +127,7 @@ st.markdown("""
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "Onsitego OSID (1).xlsx"
+EXCEL_FILE = "/workspaces/myg-osg-claim/Onsitego OSID (1).xlsx"
 TARGET_EMAIL = "shyla.mariadhasan@onsite.co.in"
 CC_EMAILS = ["shine.at@onsite.co.in", "akhilmp@myg.in","sachin.kadam@onsite.co.in","shanmugaraja.a@onsite.co.in","akhil.chandran@onsite.co.in"]
 SMTP_SERVER = "smtp.gmail.com"
@@ -160,6 +160,14 @@ def format_ist_datetime(dt_str):
         return dt.strftime('%Y-%m-%d %H:%M:%S IST')
     except:
         return str(dt_str)
+
+# ----------------------
+# WHATSAPP CHAT BUTTON HELPER
+# ----------------------
+def whatsapp_chat_link(mobile, message="Hi, Iam Jasil from myG."):
+    """Generate WhatsApp URL with Indian country code and pre-filled message."""
+    encoded = requests.utils.quote(message)
+    return f"https://wa.me/91{mobile}?text={encoded}"
 
 # ----------------------
 # LOAD EXCEL DATA
@@ -577,148 +585,117 @@ with tab1:
 with tab2:
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-header">🔍 Search & Filter Claims</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Search & Filter Claims</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns([3, 1])
     with col1:
         search_mobile = st.text_input(
-            "📱 Filter by Mobile Number",
+            "Filter by Mobile Number",
             placeholder="Enter mobile number to filter claims (leave blank for all)",
             help="Enter mobile number to view specific customer claims"
         ).strip()
 
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
-        refresh_button = st.button("🔄 Refresh Data", use_container_width=True)
+        refresh_button = st.button("Refresh Data", use_container_width=True)
 
     # Fetch claims
     try:
-        response = requests.get(WEB_APP_URL, timeout=10)  # Increased timeout for reliability
-        
-
+        response = requests.get(WEB_APP_URL, timeout=10)
         if response.status_code == 200:
             if 'application/json' in response.headers.get('Content-Type', '').lower():
                 try:
                     json_data = response.json()
-                    if not json_data:  # Check for empty JSON
-                        st.markdown("""
-                        <div class="info-box">
-                            ℹ️ <strong>No claims found</strong><br>
-                            The server returned an empty response.
-                        </div>
-                        """, unsafe_allow_html=True)
-                        all_claims = pd.DataFrame()
-                    else:
-                        all_claims = pd.DataFrame(json_data)
+                    all_claims = pd.DataFrame(json_data) if json_data else pd.DataFrame()
                 except ValueError as e:
-                    st.error(f"❌ Failed to parse JSON: {e}")
-                    st.write(f"Response content: {response.text[:500]}")
+                    st.error(f"Failed to parse JSON: {e}")
                     all_claims = pd.DataFrame()
             else:
-                st.error(f"❌ Server did not return JSON. Content-Type: {response.headers.get('Content-Type')}")
-                st.write(f"Response content: {response.text[:500]}")
+                st.error(f"Server did not return JSON. Content-Type: {response.headers.get('Content-Type')}")
                 all_claims = pd.DataFrame()
         else:
-            st.error(f"❌ Failed to fetch claims data. Status code: {response.status_code}")
+            st.error(f"Failed to fetch claims data. Status code: {response.status_code}")
             all_claims = pd.DataFrame()
-    except requests.exceptions.RequestException as e:
-        st.error(f"❌ Network error while fetching claims: {e}")
-        all_claims = pd.DataFrame()
     except Exception as e:
-        st.error(f"❌ Unexpected error while fetching claims: {e}")
+        st.error(f"Error fetching claims: {e}")
         all_claims = pd.DataFrame()
 
     if not all_claims.empty:
-        # Normalize columns immediately
         all_claims.columns = all_claims.columns.str.strip().str.lower().str.replace(r"\s+", "_", regex=True)
 
-        if search_mobile:
-            filtered_claims = all_claims[all_claims.get('mobile_no', pd.Series(dtype=str)).astype(str).str.strip() == search_mobile]
-        else:
-            filtered_claims = all_claims
+        filtered_claims = (
+            all_claims[all_claims.get('mobile_no', pd.Series()).astype(str).str.strip() == search_mobile]
+            if search_mobile else all_claims
+        )
 
         if filtered_claims.empty:
-            if search_mobile:
-                st.markdown(f"""
-                <div class="info-box">
-                    ℹ️ <strong>No claims found</strong><br>
-                    No claims found for mobile number: <strong>{search_mobile}</strong>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div class="info-box">
-                    ℹ️ <strong>No claims submitted yet</strong><br>
-                    No warranty claims have been submitted yet.
-                </div>
-                """, unsafe_allow_html=True)
+            msg = f"No claims found for <strong>{search_mobile}</strong>" if search_mobile else "No claims submitted yet"
+            st.markdown(f'<div class="info-box">{msg}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f"""
-            <div class="section-header">📊 Claims Overview ({len(filtered_claims)} records)</div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="section-header">Claims Overview ({len(filtered_claims)} records)</div>', unsafe_allow_html=True)
 
-            # Pretty card view
+            # Card View with WhatsApp Button
             for idx, claim in filtered_claims.iterrows():
-                status = str(claim.get('status', 'Unknown')).lower()
                 status_label = claim.get('status', 'Unknown')
 
+                # WhatsApp Button Logic (FIXED)
+                mobile_raw = claim.get('mobile_no', '')
+                mobile = str(mobile_raw).strip() if mobile_raw is not None else ''
+
+                if mobile.isdigit() and len(mobile) == 10:
+                    wa_url = whatsapp_chat_link(mobile)
+                    wa_button = f'<a href="{wa_url}" target="_blank"><button style="background:#25D366;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.9rem;">Chat on WhatsApp</button></a>'
+                else:
+                    wa_button = '<span style="color:#6c757d;font-size:0.9rem;">WhatsApp unavailable</span>'
+
                 st.markdown(f"""
-                <div style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1rem; margin: 0.6rem 0;">
+                <div style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1rem; margin: 0.6rem 0; position:relative;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <h4 style="color: var(--primary-color); margin: 0;">{claim.get('customer_name', 'N/A')}</h4>
                         <div style="font-weight:700;">{status_label}</div>
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.6rem;">
                         <div>
-                            <strong>📱 Mobile:</strong> {claim.get('mobile_no', 'N/A')}<br>
-                            <strong>📍 Address:</strong> {str(claim.get('address', 'N/A'))[:60]}{'...' if len(str(claim.get('address', 'N/A'))) > 60 else ''}
+                            <strong>Mobile:</strong> {mobile}<br>
+                            <strong>Address:</strong> {str(claim.get('address', 'N/A'))[:60]}{'...' if len(str(claim.get('address', 'N/A'))) > 60 else ''}
                         </div>
                         <div>
-                            <strong>📦 Products:</strong> {str(claim.get('products', 'N/A'))[:60]}{'...' if len(str(claim.get('products', 'N/A'))) > 60 else ''}<br>
-                            <strong>🔍 Issue:</strong> {str(claim.get('issue_description', 'N/A'))[:60]}{'...' if len(str(claim.get('issue_description', 'N/A'))) > 60 else ''}
+                            <strong>Products:</strong> {str(claim.get('products', 'N/A'))[:60]}{'...' if len(str(claim.get('products', 'N/A'))) > 60 else ''}<br>
+                            <strong>Issue:</strong> {str(claim.get('issue_description', 'N/A'))[:60]}{'...' if len(str(claim.get('issue_description', 'N/A'))) > 60 else ''}
                         </div>
+                    </div>
+                    <div style="position:absolute; bottom:0.8rem; right:1rem;">
+                        {wa_button}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-            # Tabular view
-            st.markdown('<div class="section-header">📋 Detailed Claims Table</div>', unsafe_allow_html=True)
-
+            # Table view
+            st.markdown('<div class="section-header">Detailed Claims Table</div>', unsafe_allow_html=True)
             display_df = filtered_claims.copy()
             if 'submitted_date' in display_df.columns:
                 display_df['submitted_date'] = display_df['submitted_date'].apply(
                     lambda x: format_ist_datetime(x) if pd.notna(x) else 'N/A'
                 )
-            elif 'timestamp' in display_df.columns:
-                display_df['timestamp'] = display_df['timestamp'].apply(
-                    lambda x: format_ist_datetime(x) if pd.notna(x) else 'N/A'
-                )
-
             rename_map = {
-                'customer_name': 'Customer Name',
-                'mobile_no': 'Mobile No',
-                'address': 'Address',
-                'products': 'Products',
-                'issue_description': 'Issue Description',
-                'status': 'Status',
-                'submitted_date': 'Submitted Date (IST)',
-                'timestamp': 'Timestamp (IST)'
+                'customer_name': 'Customer Name', 'mobile_no': 'Mobile No', 'address': 'Address',
+                'products': 'Products', 'issue_description': 'Issue Description',
+                'status': 'Status', 'submitted_date': 'Submitted Date (IST)'
             }
             display_df = display_df.rename(columns={k: v for k, v in rename_map.items() if k in display_df.columns})
-
             st.dataframe(display_df, use_container_width=True, hide_index=True)
 
     else:
         st.markdown("""
         <div class="info-box">
-            ℹ️ <strong>No claims found</strong><br>
-            No warranty claims have been submitted yet. Start by submitting a new claim in the "Submit New Claim" tab.
+            <strong>No claims found</strong><br>
+            Submit a new claim in the "Submit New Claim" tab.
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("""
     <div class="info-box">
-        <h4 style="color: var(--primary-color); margin-top: 0;">📝 How Status Updates Work</h4>
+        <h4 style="color: var(--primary-color); margin-top: 0;">How Status Updates Work</h4>
         <ul style="margin-bottom: 0;">
             <li><strong>Pending:</strong> Claim submitted and under review</li>
             <li><strong>Approved:</strong> Claim approved, service will be scheduled</li>
@@ -727,19 +704,8 @@ with tab2:
             <li><strong>Rejected:</strong> Claim not covered under warranty</li>
         </ul>
         <hr>
-        <p style="margin-bottom: 0;"><strong>Note:</strong> Status updates are managed by the warranty team through Google Sheets and will reflect here automatically when you refresh the data. All timestamps are displayed in Indian Standard Time (IST).</p>
+        <p style="margin-bottom: 0;"><strong>Note:</strong> Updates come from Google Sheets – hit Refresh.</p>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
-
-# ----------------------
-# FOOTER
-# ----------------------
-st.markdown("""
----
-<div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 10px; margin-top: 1rem;">
-    <h4 style="color: var(--primary-color); margin-bottom: 0.3rem;">🛡️ Warranty Claim Management System</h4>
-    <p style="margin: 0; color: #6c757d;">Powered by Loyalty Operation | 📧 <a href="mailto:jasil@myg.in" style="color: var(--primary-color);">jasil@myg.in</a> | 📱 <a href="tel:+918589852747" style="color: var(--primary-color);">+91 8589852747</a></p>
-</div>
-""", unsafe_allow_html=True)
