@@ -127,7 +127,7 @@ st.markdown("""
 # ----------------------
 # CONFIG
 # ----------------------
-EXCEL_FILE = "Onsitego OSID (1).xlsx"
+EXCEL_FILE = "Onsitego OSID updated upto Dec 2025.xlsx"
 TARGET_EMAIL = "shyla.mariadhasan@onsite.co.in"
 CC_EMAILS = ["shine.at@onsite.co.in", "akhilmp@myg.in","sachin.kadam@onsite.co.in","shanmugaraja.a@onsite.co.in","akhil.chandran@onsite.co.in","sarath.k@myg.in"]
 SMTP_SERVER = "smtp.gmail.com"
