@@ -164,7 +164,7 @@ def format_ist_datetime(dt_str):
 # ----------------------
 # WHATSAPP CHAT BUTTON HELPER
 # ----------------------
-def whatsapp_chat_link(mobile, message="Hi, Iam Jasil from myG."):
+def whatsapp_chat_link(mobile, message="Hi, Iam Sarath from myG."):
     """Generate WhatsApp URL with Indian country code and pre-filled message."""
     encoded = requests.utils.quote(message)
     return f"https://wa.me/91{mobile}?text={encoded}"
@@ -215,8 +215,8 @@ customer_col = col(df, ["customer", "customer name"]) or "customer"
 with st.sidebar:
     st.markdown("### ℹ️ Help & Support")
     st.markdown("**Contact Information:**")
-    st.markdown("📧 Email: jasil@myg.in")
-    st.markdown("📱 Phone: +91 8589852747")
+    st.markdown("📧 Email: sarath.k@myg.in")
+    st.markdown("📱 Phone: +91 9037202200")
     st.markdown("🕒 Business Hours: 9 AM - 6 PM")
 
 # ----------------------
@@ -452,8 +452,8 @@ with tab1:
         </div>
         <div style="text-align: center; margin-top: 14px; padding-top: 10px; border-top: 1px solid #e9ecef;">
             <p style="margin: 0;"><strong>Best Regards,</strong><br>
-            <strong>JASIL N</strong><br>
-            📞 +918589852747</p>
+            <strong>SARATH</strong><br>
+            📞 +919037202200</p>
         </div>
     </div>
 </div>
