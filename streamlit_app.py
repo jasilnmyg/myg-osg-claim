@@ -129,11 +129,11 @@ st.markdown("""
 # ----------------------
 EXCEL_FILE = "Onsitego OSID updated upto Dec 2025.xlsx"
 TARGET_EMAIL = "shyla.mariadhasan@onsite.co.in"
-CC_EMAILS = ["shine.at@onsite.co.in", "akhilmp@myg.in","sachin.kadam@onsite.co.in","shanmugaraja.a@onsite.co.in","akhil.chandran@onsite.co.in","sarath.k@myg.in"]
+CC_EMAILS = ["shine.at@onsite.co.in", "akhilmp@myg.in","sachin.kadam@onsite.co.in","shanmugaraja.a@onsite.co.in","akhil.chandran@onsite.co.in","jasil@myg.in"]
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-SENDER_EMAIL = "jasil@myg.in"
-SENDER_PASSWORD = "vurw qnwv ynys xkrf"
+SENDER_EMAIL = "sarath.k@myg.in"
+SENDER_PASSWORD = "iwpp yytv scrs ncan"
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycby48-irQy37Eq_SQKJSpv70xiBFyajtR5ScIBfeRclnvYqAMv4eVCtJLZ87QUJADqXt/exec"
 
 # ----------------------
